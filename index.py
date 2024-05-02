@@ -291,4 +291,4 @@ def send_notification(status, booking_id, reason):
 
 if __name__ == '__main__':
     create_tables()
-    application.run(debug=True)
+    application.run(debug=False,host='0.0.0.0')
