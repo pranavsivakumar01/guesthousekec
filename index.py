@@ -7,15 +7,15 @@ application = Flask(__name__)
 application.config['DATABASE'] = 'site.db'
 application.secret_key = "hello"
 
-EMAIL_ADDRESS = "vishnus.22aim@kongu.edu"  
-EMAIL_PASSWORD = "vishnu17"  
+EMAIL_ADDRESS = "pranavas.22aim@kongu.edu"  # Your Gmail email address
+EMAIL_PASSWORD = "wtaz zlev niyw yhqm"  # Your Gmail password or app-specific password
 RECIPIENT_EMAIL = "pranavsivakumar328@gmail.com"
 
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(application.config['DATABASE'])
-        db.row_factory = sqlite3.Row  
+        db.row_factory = sqlite3.Row  # Access rows as dictionaries
     return db
 
 def close_db(e=None):
@@ -32,23 +32,23 @@ house_info = {
         'rooms': 3,
         'adults': 2,
         'children': 1,
-        'description': "NATURAL VIEW",
-        'url': "https://vaitheeshwarij14.github.io/images/hack1.jpg"
+        'description': "Sample image",
+        'url': "https://saliniyan.github.io/images/room_1.jpg"
     },
 
     2: {
         'rooms': 4,
         'adults': 3,
         'children': 2,
-        'description': "HOTEL NEAR",
-        'url': "https://vaitheeshwarij14.github.io/images/hack2.jpg"
+        'description': "sample image 2",
+        'url': "https://saliniyan.github.io/images/room_2.jpg"
     },
     3: {
         'rooms': 2,
         'adults': 1,
         'children': 0,
-        'description': "PARKING LOT",
-        'url': "https://vaitheeshwarij14.github.io/images/hack3.jpg"
+        'description': "Sample image3",
+        'url': "https://saliniyan.github.io/images/room_3.jpg"
     }
 }
 
@@ -88,10 +88,10 @@ def authenticate():
 
     if username == 's.ac.in' and password == '123':
         session['username'] = username
-        return redirect(url_for('index1'))  
+        return redirect(url_for('index1'))  # Redirect to index1 route
     elif username == 'b' and password == '456':
         session['username'] = username
-        return redirect(url_for('admin_panel'))  
+        return redirect(url_for('admin_panel'))  # Redirect to admin_panel route
     else:
         return "Invalid credentials"
 
@@ -189,7 +189,7 @@ def submit_form():
 @application.route('/admin', methods=['GET', 'POST'])
 def admin_panel():
     if 'username' not in session or session['username'] != 'b':
-        return redirect(url_for('index')) 
+        return redirect(url_for('index'))
 
     if request.method == 'GET':
         db = get_db()
@@ -198,7 +198,7 @@ def admin_panel():
             SELECT * FROM reservations WHERE status = 'pending';
         ''')
         pending_bookings = cursor.fetchall()
-        
+
         return render_template('admin_panel.html', pending_bookings=pending_bookings)
     elif request.method == 'POST':
         booking_id = request.form['booking_id']
@@ -249,46 +249,35 @@ def send_email(status, booking_id, reason):
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         smtp.send_message(msg)
-def send_notification(status, booking_id, reason):
-    # Sending Email
-    msg = EmailMessage()
-    msg['Subject'] = 'Booking Status Notification'
-    msg['From'] = EMAIL_ADDRESS
-    msg['To'] = RECIPIENT_EMAIL
 
-    if status == 'accepted':
-        msg.set_content(f"""\
-            Booking Accepted!
-            Your booking for the room with ID {booking_id} has been accepted.
+@application.route('/accepted_bookings', methods=['GET'])
+def database_view():
+    # Connect to the SQLite database
+    conn = sqlite3.connect(application.config['DATABASE'])
 
-        """)
-    elif status == 'rejected':
-        msg.set_content(f"""\
-            Booking Rejected!
-            We regret to inform you that your booking for the room with ID {booking_id} has been rejected.
+    query = "SELECT * FROM reservations WHERE status = 'accepted';"
 
-            Reason: {reason}
-        """)
+    # Fetch data into a pandas DataFrame
+    df = pd.read_sql_query(query, conn)
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        smtp.send_message(msg)
+    conn.close()
 
-    # Sending SMS
-    client = Client(account_sid, auth_token)
-    twilio_number = '+919384125235'
-    recipient_number = '+918072657948'  # Update with recipient's phone number
-    message_body = f"Booking {status.capitalize()}! Your booking for the room with ID {booking_id} has been {status}."
-    message = client.messages.create(
-        body=message_body,
-        from_=twilio_number,
-        to=recipient_number
+    # Convert the DataFrame to an Excel file in memory
+    excel_file = BytesIO()
+    df.to_excel(excel_file, index=False)
+    excel_file.seek(0)
+
+    # Send the Excel file as a response to the client
+    return send_file(
+        excel_file,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='accepted_bookings.xlsx'
     )
-
-
-    print("your slot is register")
 
 
 if __name__ == '__main__':
     create_tables()
-    application.run(debug=False,host='0.0.0.0')
+    application.run(debug=True)
+
+
